@@ -1,18 +1,21 @@
 import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
 import { Visitors } from './collection';
-import { checkAndCreateVisitor } from 'visitor-npm-app'; // from your custom NPM package
+const { checkAndCreateVisitor } = require('visitor-npm-app');
 
 Meteor.methods({
-  'visitors.checkIn'(data) {
+  async 'visitors.checkIn'(data) {
+    console.log("Visitors has findOneAsync?", typeof Visitors.findOneAsync);
     check(data, {
       name: String,
       company: String,
       email: String,
-      purpose: String
+      purpose: String,
     });
 
-    // Uses your custom logic to validate and insert
-    return checkAndCreateVisitor(data, Visitors);
+    return await checkAndCreateVisitor(data, Visitors);
+    
+
   }
+  
 });

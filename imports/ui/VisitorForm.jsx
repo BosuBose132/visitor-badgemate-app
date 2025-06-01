@@ -77,13 +77,18 @@ const VisitorForm = () => {
     Meteor.call('visitors.checkIn', formData, (error, result) => {
       setLoading(false);
       if (error) {
-        setMessage('Check-in failed or duplicate entry.');
-        setSuccess(false);
-      } else {
-        setMessage('Visitor successfully checked in!');
-        setSuccess(true);
-        setFormData({ name: '', company: '', email: '', purpose: '' });
-      }
+  setMessage('Check-in failed.');
+  setSuccess(false);
+} else {
+  if (result.status === 'duplicate') {
+    setMessage('Duplicate entry. Visitor already exists.');
+    setSuccess(false);
+  } else {
+    setMessage('Visitor successfully checked in!');
+    setSuccess(true);
+    setFormData({ name: '', company: '', email: '', purpose: '' });
+  }
+}
     });
   };
 
