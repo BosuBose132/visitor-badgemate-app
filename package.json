@@ -12,6 +12,7 @@
     "meteor-node-stubs": "^1.2.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "tesseract.js": "^6.0.1",
     "visitor-npm-app": "^1.0.12"
   },
   "meteor": {
