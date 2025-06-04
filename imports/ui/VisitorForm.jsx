@@ -232,12 +232,17 @@ const VisitorForm = () => {
     <div style={{
       minHeight: '100vh',
       height: '100vh',
+      width: '100vw',
       overflow: 'hidden',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: '#23272f',
-      position: 'relative',
+      background: '#1e1e25', // solid dark background
+      position: 'fixed', // ensure no scroll/white space
+      top: 0,
+      left: 0,
+      margin: 0,
+      padding: 0,
     }}>
       {/* Hospital doodle SVG background */}
       <svg
