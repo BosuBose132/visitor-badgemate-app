@@ -237,49 +237,14 @@ const VisitorForm = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: '#1e1e25', // solid dark background
-      position: 'fixed', // ensure no scroll/white space
+      background: 'linear-gradient(180deg, #1f2937 0%, #23272f 100%)',
+      position: 'fixed',
       top: 0,
       left: 0,
       margin: 0,
       padding: 0,
     }}>
-      {/* Hospital doodle SVG background */}
-      <svg
-        width="100%"
-        height="100%"
-        viewBox="0 0 1440 900"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          zIndex: 0,
-          opacity: 0.13,
-          pointerEvents: 'none',
-        }}
-      >
-        <g>
-          <rect x="100" y="600" width="180" height="120" rx="16" fill="#00bcd4"/>
-          <rect x="320" y="650" width="120" height="70" rx="12" fill="#2196f3"/>
-          <rect x="500" y="620" width="160" height="100" rx="14" fill="#b2ebf2"/>
-          <rect x="700" y="670" width="110" height="50" rx="10" fill="#00bcd4"/>
-          <rect x="850" y="600" width="200" height="120" rx="16" fill="#2196f3"/>
-          <rect x="1100" y="650" width="120" height="70" rx="12" fill="#b2ebf2"/>
-          {/* Cross symbol on hospital */}
-          <rect x="170" y="640" width="40" height="10" rx="5" fill="#fff"/>
-          <rect x="185" y="625" width="10" height="40" rx="5" fill="#fff"/>
-          <rect x="900" y="640" width="40" height="10" rx="5" fill="#fff"/>
-          <rect x="915" y="625" width="10" height="40" rx="5" fill="#fff"/>
-          {/* Trees doodle */}
-          <ellipse cx="250" cy="720" rx="18" ry="32" fill="#388e3c"/>
-          <ellipse cx="600" cy="710" rx="14" ry="26" fill="#388e3c"/>
-          <ellipse cx="1200" cy="720" rx="18" ry="32" fill="#388e3c"/>
-        </g>
-      </svg>
+      {/* No background SVGs or doodles. Professional, clean gradient only. */}
       {showSuccessScreen ? (
         <div style={{
           zIndex: 2,
