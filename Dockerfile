@@ -33,5 +33,7 @@ ENV PORT=3000
 ENV ROOT_URL=https://your-render-url.onrender.com
 ENV MONGO_URL=mongodb+srv://<username>:<password>@cluster.mongodb.net/visitorDB?retryWrites=true&w=majority
 
+RUN meteor npm install
+
 # Start server
 CMD ["node", "main.js"]
