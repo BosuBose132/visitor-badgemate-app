@@ -17,7 +17,7 @@ COPY . .
 RUN meteor npm install
 
 # Build Meteor bundle
-RUN meteor build ../bundle --directory
+RUN meteor build ./bundle --directory
 
 # Runtime Stage
 FROM node:20-bullseye
