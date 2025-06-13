@@ -1,39 +1,23 @@
-# Use official Meteor build image
-FROM zodern/meteor:latest
-
-# Set your working directory
-WORKDIR /app
-
-# Copy source code
-COPY . .
-
-# Install dependencies
-RUN meteor npm install
-
-# Build Meteor app
-RUN meteor build --directory /app-build --server-only --allow-superuser
-
-# Move to built directory
-WORKDIR /app-build/bundle/programs/server
-
-# Install server npm dependencies
-RUN meteor npm install
-
-# Use node base image for runtime
+# Use official Node 20 Alpine image
 FROM node:20-alpine
 
-# Set workdir
+# Install required packages: curl, bash (required by Meteor installer)
+RUN apk add --no-cache curl bash
+
+# Install Meteor
+RUN curl https://install.meteor.com/ | sh
+
+# Set working directory inside container
 WORKDIR /app
 
-# Copy built app from previous stage
-COPY --from=0 /app-build/bundle /app
+# Copy all files from local directory to container workdir
+COPY . .
 
-# Set environment variables
-ENV PORT=3000
-ENV ROOT_URL=https://your-render-url.onrender.com
-ENV MONGO_URL=mongodb+srv://<username>:<password>@cluster.mongodb.net/visitorDB?retryWrites=true&w=majority
-
+# Install dependencies via Meteor
 RUN meteor npm install
 
-# Start server
-CMD ["node", "main.js"]
+# Expose port (optional but good practice)
+EXPOSE 3000
+
+# Start the Meteor app
+CMD ["meteor", "run"]
