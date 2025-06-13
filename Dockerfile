@@ -1,23 +1,23 @@
-# Use official Node 20 Alpine image
+# Base image with Node.js
 FROM node:20-alpine
 
-# Install required packages: curl, bash (required by Meteor installer)
-RUN apk add --no-cache curl bash
+# Install system dependencies required for Meteor
+RUN apk add --no-cache bash curl python3 make g++ 
 
-# Install Meteor
+# Install Meteor globally
 RUN curl https://install.meteor.com/ | sh
 
-# Set working directory inside container
+# Set working directory
 WORKDIR /app
 
-# Copy all files from local directory to container workdir
+# Copy source files into container
 COPY . .
 
-# Install dependencies via Meteor
+# Install npm dependencies using Meteor's npm
 RUN meteor npm install
 
-# Expose port (optional but good practice)
+# Expose app port
 EXPOSE 3000
 
-# Start the Meteor app
-CMD ["meteor", "run"]
+# Start Meteor app
+CMD ["meteor", "run", "--port", "3000"]
