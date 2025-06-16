@@ -60,7 +60,10 @@ const VisitorForm = () => {
     name: '',
     company: '',
     email: '',
-    purpose: ''
+    purpose: '',
+    phone: '',
+    dob: '',
+    gender: '',
   });
   const [message, setMessage] = useState('');
   const [success, setSuccess] = useState(false);
@@ -84,8 +87,15 @@ const VisitorForm = () => {
 
   // Validate all fields and email format
   const validateForm = () => {
-    if (!formData.name || !formData.company || !formData.email || !formData.purpose) {
-      setMessage('All fields are required.');
+    if (
+      !formData.name ||
+      !formData.company ||
+      !formData.email ||
+      !formData.purpose ||
+      !formData.phone ||
+      !formData.gender
+    ) {
+      setMessage('All required fields must be filled.');
       setSuccess(false);
       return false;
     }
@@ -375,8 +385,8 @@ const VisitorForm = () => {
                   appearance: 'none',
                   height: '48px',
                   padding: '12px',
-                  paddingRight: '40px', // space for icon
-                  width: '100%', // Ensure full width like other inputs
+                  paddingRight: '40px',
+                  width: '100%',
                   boxSizing: 'border-box',
                 }}
                 onFocus={e => e.target.style.border = '2px solid #2196f3'}
@@ -390,7 +400,103 @@ const VisitorForm = () => {
                 <option value="Basic check">Basic check</option>
                 <option value="Out patient">Out patient</option>
               </select>
-              {/* Dropdown arrow icon */}
+              <span style={{
+                pointerEvents: 'none',
+                position: 'absolute',
+                right: 16,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#00bcd4',
+                fontSize: 22,
+                display: 'flex',
+                alignItems: 'center',
+              }}>
+                <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 8L10 12L14 8" stroke="#00bcd4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </span>
+            </div>
+            {/* Phone Number */}
+            <input
+              name="phone"
+              type="tel"
+              placeholder="Phone Number"
+              value={formData.phone}
+              onChange={handleChange}
+              style={{
+                ...inputStyle,
+                background: '#23272f',
+                color: '#f8fafc',
+                border: '2px solid #00bcd4',
+                fontSize: 17,
+                marginBottom: 16,
+                boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
+                transition: 'border 0.2s, box-shadow 0.2s',
+                height: '48px',
+                padding: '12px',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+              onFocus={e => e.target.style.border = '2px solid #2196f3'}
+              onBlur={e => e.target.style.border = '2px solid #00bcd4'}
+              required
+            />
+            {/* Date of Birth */}
+            <input
+              name="dob"
+              type="date"
+              placeholder="Date of Birth"
+              value={formData.dob}
+              onChange={handleChange}
+              style={{
+                ...inputStyle,
+                background: '#23272f',
+                color: '#f8fafc',
+                border: '2px solid #00bcd4',
+                fontSize: 17,
+                marginBottom: 16,
+                boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
+                transition: 'border 0.2s, box-shadow 0.2s',
+                height: '48px',
+                padding: '12px',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+              onFocus={e => e.target.style.border = '2px solid #2196f3'}
+              onBlur={e => e.target.style.border = '2px solid #00bcd4'}
+            />
+            {/* Gender Dropdown */}
+            <div style={{position: 'relative', marginBottom: 16}}>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                style={{
+                  ...inputStyle,
+                  background: '#23272f',
+                  color: '#f8fafc',
+                  border: '2px solid #00bcd4',
+                  fontSize: 17,
+                  marginBottom: 0,
+                  boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
+                  transition: 'border 0.2s, box-shadow 0.2s',
+                  appearance: 'none',
+                  height: '48px',
+                  padding: '12px',
+                  paddingRight: '40px',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={e => e.target.style.border = '2px solid #2196f3'}
+                onBlur={e => e.target.style.border = '2px solid #00bcd4'}
+                required
+              >
+                <option value="" disabled>Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
               <span style={{
                 pointerEvents: 'none',
                 position: 'absolute',
@@ -415,7 +521,7 @@ const VisitorForm = () => {
                 background: 'linear-gradient(90deg, #00bcd4 0%, #2196f3 100%)',
                 fontSize: 18,
                 marginTop: 18,
-                marginBottom: 12, // Add space below Check In button
+                marginBottom: 12,
                 boxShadow: '0 4px 16px 0 rgba(33,150,243,0.18)',
                 letterSpacing: 0.5,
                 border: 'none',
