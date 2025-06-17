@@ -4,7 +4,6 @@
 
 import React, { useState, useRef } from 'react';
 import { Meteor } from 'meteor/meteor';
-import Tesseract from 'tesseract.js';
 
 const cardStyle = {
   maxWidth: '400px',
@@ -191,7 +190,7 @@ const VisitorForm = () => {
     }
   };
 
-  // Capture frame from video and run OCR
+  // Capture frame from video and send to Meteor for OCR
   const handleCapture = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
@@ -209,33 +208,39 @@ const VisitorForm = () => {
     setMessage('');
     try {
       const dataUrl = canvas.toDataURL('image/png');
-      const { data: { text } } = await Tesseract.recognize(dataUrl, 'eng', {
-        logger: m => {/* Optionally log progress */}
-      });
-      // Extract name and company from OCR text
-      let name = '', company = '';
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-      for (let i = 0; i < lines.length; i++) {
-        if (!name && /[A-Za-z]+ [A-Za-z]+/.test(lines[i]) && lines[i].length < 40) {
-          name = lines[i];
-          if (lines[i+1] && lines[i+1].length > 2 && lines[i+1].length < 40 && !lines[i+1].includes('@')) {
-            company = lines[i+1];
-          }
-          break;
+      // Send base64 image to Meteor method for Google Vision OCR
+      Meteor.call('visitors.processOCR', dataUrl, (error, resultText) => {
+        setOcrLoading(false);
+        if (error || !resultText) {
+          setMessage('Failed to scan ID from camera. Please try again.');
+          setSuccess(false);
+          return;
         }
-      }
-      setFormData(prev => ({
-        ...prev,
-        name: name || prev.name,
-        company: company || prev.company
-      }));
-      setMessage('ID scanned from camera! Please verify and complete the form.');
-      setSuccess(true);
+        // Parse resultText to extract name and company
+        let name = '', company = '';
+        const lines = resultText.split('\n').map(l => l.trim()).filter(Boolean);
+        for (let i = 0; i < lines.length; i++) {
+          if (!name && /[A-Za-z]+ [A-Za-z]+/.test(lines[i]) && lines[i].length < 40) {
+            name = lines[i];
+            if (lines[i+1] && lines[i+1].length > 2 && lines[i+1].length < 40 && !lines[i+1].includes('@')) {
+              company = lines[i+1];
+            }
+            break;
+          }
+        }
+        setFormData(prev => ({
+          ...prev,
+          name: name || prev.name,
+          company: company || prev.company
+        }));
+        setMessage('ID scanned from camera! Please verify and complete the form.');
+        setSuccess(true);
+      });
     } catch (err) {
+      setOcrLoading(false);
       setMessage('Failed to scan ID from camera. Please try again.');
       setSuccess(false);
     }
-    setOcrLoading(false);
   };
 
   return (
