@@ -25,7 +25,7 @@ Meteor.methods({
    async 'visitors.processOCR'(base64ImageData) {
     check(base64ImageData, String);
 
-    // Convert base64 image string to Buffer (remove the prefix data:image/png;base64,)
+    
     const buffer = Buffer.from(base64ImageData.split(",")[1], 'base64');
 
     try {

@@ -1,7 +1,7 @@
 import vision from '@google-cloud/vision';
 import path from 'path';
 
-const keyPath = path.resolve(process.cwd(), 'credentials/service-account.json');
+const keyPath = Assets.absoluteFilePath('credentials/service-account.json');
 
 const client = new vision.ImageAnnotatorClient({
   keyFilename: keyPath,
