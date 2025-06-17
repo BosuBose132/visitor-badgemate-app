@@ -4,6 +4,7 @@ import { Visitors } from './collection';
 import { Match } from 'meteor/check';
 
 const { checkAndCreateVisitor } = require('visitor-npm-app');
+import { extractTextFromImage } from './googleVision';
 
 Meteor.methods({
   async 'visitors.checkIn'(data) {
@@ -19,8 +20,22 @@ Meteor.methods({
     });
 
     return await checkAndCreateVisitor(data, Visitors);
-    
+   },
 
+   async 'visitors.processOCR'(base64ImageData) {
+    check(base64ImageData, String);
+
+    // Convert base64 image string to Buffer (remove the prefix data:image/png;base64,)
+    const buffer = Buffer.from(base64ImageData.split(",")[1], 'base64');
+
+    try {
+      const extractedText = await extractTextFromImage(buffer);
+      console.log('Extracted Text:', extractedText);
+      return { text: extractedText };
+    } catch (err) {
+      console.error('Google Vision OCR failed:', err);
+      throw new Meteor.Error('vision-ocr-failed', 'OCR failed: ' + err.message);
+    }
   }
   
 });
