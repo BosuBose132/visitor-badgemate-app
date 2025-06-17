@@ -4,7 +4,7 @@ import { Visitors } from './collection';
 import { Match } from 'meteor/check';
 
 const { checkAndCreateVisitor } = require('visitor-npm-app');
-import { extractTextFromImage } from './googleVision';
+import { extractTextFromImage } from '../googleVision';
 
 Meteor.methods({
   async 'visitors.checkIn'(data) {
