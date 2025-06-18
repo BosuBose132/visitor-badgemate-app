@@ -217,22 +217,31 @@ const VisitorForm = () => {
           return;
         }
         // Parse resultText to extract name and company
-        let name = '', company = '';
-        const lines = resultText.split('\n').map(l => l.trim()).filter(Boolean);
-        for (let i = 0; i < lines.length; i++) {
-          if (!name && /[A-Za-z]+ [A-Za-z]+/.test(lines[i]) && lines[i].length < 40) {
-            name = lines[i];
-            if (lines[i+1] && lines[i+1].length > 2 && lines[i+1].length < 40 && !lines[i+1].includes('@')) {
-              company = lines[i+1];
-            }
-            break;
-          }
+              let name = '', email = '', phone = '', company = '';
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const phoneRegex = /\d{10}/;
+
+      const lines = resultText.split('\n').map(l => l.trim()).filter(Boolean);
+
+      for (let line of lines) {
+        if (!email && emailRegex.test(line)) {
+          email = line;
+        } else if (!phone && phoneRegex.test(line)) {
+          phone = line.match(phoneRegex)[0];
+        } else if (!name && /^[A-Za-z]+ [A-Za-z]+$/.test(line)) {
+          name = line;
+        } else if (!company && line.length > 3 && line.length < 40 && !line.includes('@')) {
+          company = line;
         }
-        setFormData(prev => ({
-          ...prev,
-          name: name || prev.name,
-          company: company || prev.company
-        }));
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        name: name || prev.name,
+        email: email || prev.email,
+        phone: phone || prev.phone,
+        company: company || prev.company,
+      }));
         setMessage('ID scanned from camera! Please verify and complete the form.');
         setSuccess(true);
       });
