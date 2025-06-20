@@ -1,5 +1,5 @@
 local
-service-account.json
+private/credentials/service-account.json
 # Node.js dependencies
 node_modules/
 npm-debug.log*
@@ -56,3 +56,7 @@ docker-compose.override.yml
 # Optional: any backups or temp files
 *.bak
 *.swp
+*.swo
+*~
+
+
