@@ -1,1 +1,38 @@
-local
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+
+# Ignore credentials and private keys
+private/
+private/credentials/service-account.json
+google-vision-key.json
+server/keys/
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Meteor-specific
+.meteor/local/
+.meteor/meteor-simulate-*
+
+# Build outputs
+bundle/
+dist/
+build/
+coverage/
+*.tgz
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
