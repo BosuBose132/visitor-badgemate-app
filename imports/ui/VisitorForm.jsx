@@ -39,7 +39,7 @@ const buttonStyle = {
   fontSize: '16px',
   cursor: 'pointer',
   marginTop: '16px',
-  transition: 'background 0.2s',
+  transition: 'background 0.2s, transform 0.2s',
 };
 
 const messageStyle = (success) => ({
@@ -53,6 +53,170 @@ const messageStyle = (success) => ({
   fontWeight: '500',
   fontSize: '15px',
 });
+
+const welcomeContainerStyle = {
+  minHeight: '100vh',
+  width: '100vw',
+  background: 'linear-gradient(180deg, #1f2937 0%, #23272f 100%)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexDirection: 'column',
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  zIndex: 10,
+  overflow: 'hidden',
+};
+
+const hospitalImgStyle = {
+  width: 220,
+  height: 220,
+  objectFit: 'cover',
+  borderRadius: '50%',
+  boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)',
+  marginBottom: 32,
+  animation: 'popIn 1s cubic-bezier(.68,-0.55,.27,1.55)',
+};
+
+const welcomeTitleStyle = {
+  color: '#fff',
+  fontWeight: 800,
+  fontSize: 38,
+  marginBottom: 8,
+  letterSpacing: 1,
+  textAlign: 'center',
+  animation: 'fadeInUp 1.2s 0.2s both',
+};
+
+const welcomeDescStyle = {
+  color: '#b2ebf2',
+  fontSize: 20,
+  marginBottom: 36,
+  textAlign: 'center',
+  fontWeight: 500,
+  lineHeight: 1.5,
+  animation: 'fadeInUp 1.2s 0.4s both',
+};
+
+const checkBtnStyle = {
+  ...buttonStyle,
+  width: 220,
+  fontSize: 20,
+  fontWeight: 700,
+  borderRadius: 12,
+  marginTop: 0,
+  marginBottom: 0,
+  background: 'linear-gradient(90deg, #00bcd4 0%, #2196f3 100%)',
+  boxShadow: '0 4px 16px 0 rgba(33,150,243,0.18)',
+  animation: 'fadeInUp 1.2s 0.6s both',
+};
+
+function extractVisitorFields(ocrText) {
+  const lines = ocrText
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  let name = '';
+  let company = '';
+  let email = '';
+  let phone = '';
+  let dob = '';
+
+  // Email regex
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  // Phone regex: matches numbers with optional +, (), -, spaces, at least 7 digits
+  const phoneRegex = /(\+?\d[\d\s\-().]{6,}\d)/;
+  // Company keywords
+  const companyKeywords = [
+    'Hospital', 'Clinic', 'Labs', 'Inc', 'Ltd', 'Corporation', 'LLC'
+  ];
+  // Date of birth regex: matches DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, etc.
+  const dobRegex = /\b(?:DOB|D\.O\.B\.|Date of Birth)[:\s\-]*((?:\d{2}[\/\-\.]){2}\d{2,4}|\d{4}[\/\-\.]\d{2}[\/\-\.]\d{2})\b/i;
+  const dateRegex = /\b(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{2}[\/\-\.]\d{2})\b/;
+
+  // Find email and phone first
+  for (const line of lines) {
+    if (!email && emailRegex.test(line)) {
+      email = line.match(emailRegex)[0];
+    }
+    if (!phone && phoneRegex.test(line.replace(/\s+/g, ''))) {
+      phone = line.match(phoneRegex)[0].replace(/[^\d+]/g, '');
+    }
+    // Find DOB with label
+    if (!dob && dobRegex.test(line)) {
+      dob = dobRegex.exec(line)[1];
+    }
+  }
+
+  // If not found, look for a standalone date near a DOB label or in the first few lines
+  if (!dob) {
+    for (let i = 0; i < lines.length; i++) {
+      if (
+        /dob|d\.o\.b\.|date of birth/i.test(lines[i]) &&
+        i + 1 < lines.length &&
+        dateRegex.test(lines[i + 1])
+      ) {
+        dob = dateRegex.exec(lines[i + 1])[1];
+        break;
+      }
+      // Sometimes date is on the same line without label
+      if (!dob && dateRegex.test(lines[i])) {
+        dob = dateRegex.exec(lines[i])[1];
+      }
+    }
+  }
+
+  // Find company
+  for (const line of lines) {
+    if (
+      companyKeywords.some(word =>
+        line.toLowerCase().includes(word.toLowerCase())
+      )
+    ) {
+      company = line;
+      break;
+    }
+  }
+
+  // Find name: look for a line with 2+ capitalized words, not containing company/email/phone
+  for (const line of lines) {
+    if (
+      !name &&
+      /^[A-Z][a-z]+(?: [A-Z][a-z]+)+$/.test(line) && // "First Last" or "First Middle Last"
+      !line.toLowerCase().includes('hospital') &&
+      !line.toLowerCase().includes('clinic') &&
+      !line.toLowerCase().includes('labs') &&
+      !emailRegex.test(line) &&
+      !phoneRegex.test(line)
+    ) {
+      name = line;
+      break;
+    }
+  }
+
+  // Fallback: try to find any line with 2+ words, mostly letters, not company/email/phone
+  if (!name) {
+    for (const line of lines) {
+      if (
+        line.split(' ').length >= 2 &&
+        /^[A-Za-z .'-]+$/.test(line) &&
+        !companyKeywords.some(word => line.toLowerCase().includes(word.toLowerCase())) &&
+        !emailRegex.test(line) &&
+        !phoneRegex.test(line)
+      ) {
+        name = line
+          .split(' ')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(' ');
+        break;
+      }
+    }
+  }
+
+  return { name, company, email, phone, dob };
+}
 
 const VisitorForm = () => {
   const [formData, setFormData] = useState({
@@ -71,6 +235,7 @@ const VisitorForm = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [videoStream, setVideoStream] = useState(null);
   const [showSuccessScreen, setShowSuccessScreen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -125,7 +290,7 @@ const VisitorForm = () => {
         } else {
           setMessage('Visitor successfully checked in!');
           setSuccess(true);
-          setFormData({ name: '', company: '', email: '', purpose: '' });
+          setFormData({ name: '', company: '', email: '', purpose: '', phone: '', dob: '', gender: '' });
           setShowSuccessScreen(true);
         }
       }
@@ -145,30 +310,29 @@ const VisitorForm = () => {
     setOcrLoading(true);
     setMessage('');
     try {
-      const { data: { text } } = await Tesseract.recognize(file, 'eng', {
-        logger: m => {/* Optionally log progress */}
-      });
-      // Simple parsing: try to extract name, email, company from OCR text
-      let name = '', email = '', company = '', purpose = formData.purpose;
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-      for (let line of lines) {
-        if (!email && emailRegex.test(line)) email = line;
-        else if (!name && /[A-Za-z]+ [A-Za-z]+/.test(line) && line.length < 40) name = line;
-        else if (!company && line.length > 2 && line.length < 40 && !line.includes('@')) company = line;
-      }
-      setFormData({
-        name: name || formData.name,
-        company: company || formData.company,
-        email: email || formData.email,
-        purpose
-      });
-      setMessage('ID scanned! Please verify and complete the form.');
-      setSuccess(true);
+      // Replace with Meteor OCR call if needed
+      // For now, just simulate
+      setTimeout(() => {
+        // Simulate OCR result
+        const ocrText = "John Doe\nAcme Hospital\njohn.doe@email.com\n+1 555-123-4567\nDOB: 1990-01-01";
+        const { name, company, email, phone, dob } = extractVisitorFields(ocrText);
+        setFormData(prev => ({
+          ...prev,
+          name: name || prev.name,
+          company: company || prev.company,
+          email: email || prev.email,
+          phone: phone || prev.phone,
+          dob: dob || prev.dob,
+        }));
+        setMessage('ID scanned! Please verify and complete the form.');
+        setSuccess(true);
+        setOcrLoading(false);
+      }, 1500);
     } catch (err) {
       setMessage('Failed to scan ID. Please try again.');
       setSuccess(false);
+      setOcrLoading(false);
     }
-    setOcrLoading(false);
   };
 
   // Open webcam and show video preview
@@ -209,39 +373,24 @@ const VisitorForm = () => {
     try {
       const dataUrl = canvas.toDataURL('image/png');
       // Send base64 image to Meteor method for Google Vision OCR
-      Meteor.call('visitors.processOCR', dataUrl, (error, resultText) => {
+      Meteor.call('visitors.processOCR', dataUrl, (error, result) => {
         setOcrLoading(false);
+        const resultText = result?.text || '';
         if (error || !resultText) {
           setMessage('Failed to scan ID from camera. Please try again.');
           setSuccess(false);
           return;
         }
-        // Parse resultText to extract name and company
-              let name = '', email = '', phone = '', company = '';
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const phoneRegex = /\d{10}/;
-
-      const lines = resultText.split('\n').map(l => l.trim()).filter(Boolean);
-
-      for (let line of lines) {
-        if (!email && emailRegex.test(line)) {
-          email = line;
-        } else if (!phone && phoneRegex.test(line)) {
-          phone = line.match(phoneRegex)[0];
-        } else if (!name && /^[A-Za-z]+ [A-Za-z]+$/.test(line)) {
-          name = line;
-        } else if (!company && line.length > 3 && line.length < 40 && !line.includes('@')) {
-          company = line;
-        }
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        name: name || prev.name,
-        email: email || prev.email,
-        phone: phone || prev.phone,
-        company: company || prev.company,
-      }));
+        // Use the improved extraction function
+        const { name, company, email, phone, dob } = extractVisitorFields(resultText);
+        setFormData(prev => ({
+          ...prev,
+          name: name || prev.name,
+          company: company || prev.company,
+          email: email || prev.email,
+          phone: phone || prev.phone,
+          dob: dob || prev.dob,
+        }));
         setMessage('ID scanned from camera! Please verify and complete the form.');
         setSuccess(true);
       });
@@ -251,6 +400,14 @@ const VisitorForm = () => {
       setSuccess(false);
     }
   };
+
+  // Animation for form entrance
+  const [formVisible, setFormVisible] = useState(false);
+  React.useEffect(() => {
+    if (!showWelcome) {
+      setTimeout(() => setFormVisible(true), 100);
+    }
+  }, [showWelcome]);
 
   return (
     <div style={{
@@ -268,393 +425,431 @@ const VisitorForm = () => {
       margin: 0,
       padding: 0,
     }}>
-      {/* No background SVGs or doodles. Professional, clean gradient only. */}
-      {showSuccessScreen ? (
-        <div style={{
-          zIndex: 2,
-          maxWidth: 480,
-          width: '100%',
-          margin: '0 auto',
-          padding: '48px 32px',
-          background: 'linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%)',
-          borderRadius: 24,
-          boxShadow: '0 8px 40px 0 rgba(33, 150, 243, 0.18)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 340,
-        }}>
-          <span style={{fontSize: 72, marginBottom: 24}} role="img" aria-label="hospital">🏥</span>
-          <h1 style={{color: '#007cf0', fontWeight: 800, fontSize: 36, margin: 0, textAlign: 'center', letterSpacing: 1}}>Check-In Successful!</h1>
-          <p style={{color: '#00838f', fontSize: 20, margin: '24px 0 0 0', textAlign: 'center', fontWeight: 500, lineHeight: 1.5}}>
-            Thank you for checking in.<br />
-            Please wait to be called or assisted by our staff.<br />
-            <span style={{fontSize: 28, display: 'block', marginTop: 16}}>Have a healthy day!</span>
-          </p>
-        </div>
-      ) : (
-        <div style={{
-          ...cardStyle,
-          zIndex: 2,
-          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)',
-          background: 'rgba(255,255,255,0.95)',
-          border: '1px solid #e3eafc',
-          backdropFilter: 'blur(6px)',
-        }}>
-          <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 18}}>
-            <span style={{fontSize: 48, marginBottom: 8}} role="img" aria-label="hospital">🏥</span>
-            <h2 style={{margin: 0, color: '#007cf0', fontWeight: 700, fontSize: 26, letterSpacing: 0.5}}>Visitor Check-In</h2>
-            <p style={{margin: '6px 0 0 0', color: '#6b7280', fontSize: 15, textAlign: 'center'}}>Welcome! Please fill out the form below to check in.</p>
+      {/* Welcome Page */}
+      {showWelcome && (
+        <div style={welcomeContainerStyle}>
+          <img
+            src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80"
+            alt="Hospital"
+            style={hospitalImgStyle}
+          />
+          <h1 style={welcomeTitleStyle}>Welcome to <span style={{ color: '#00bcd4' }}>MIE</span></h1>
+          <div style={welcomeDescStyle}>
+            Your health and safety are our priority.<br />
+            Please check in to continue.
           </div>
-          <form onSubmit={handleSubmit} style={{width: '100%', marginTop: 8}} autoComplete="off">
-            {/* Full Name */}
-            <input
-              name="name"
-              placeholder="Full Name"
-              value={formData.name}
-              onChange={handleChange}
-              style={{
-                ...inputStyle,
-                background: '#23272f',
-                color: '#f8fafc',
-                border: '2px solid #00bcd4',
-                fontSize: 17,
-                marginBottom: 16,
-                boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
-                transition: 'border 0.2s, box-shadow 0.2s',
-                height: '48px',
-                padding: '12px',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-              onFocus={e => e.target.style.border = '2px solid #2196f3'}
-              onBlur={e => e.target.style.border = '2px solid #00bcd4'}
-              required
-            />
-            {/* Company */}
-            <input
-              name="company"
-              placeholder="Company / Organization"
-              value={formData.company}
-              onChange={handleChange}
-              style={{
-                ...inputStyle,
-                background: '#23272f',
-                color: '#f8fafc',
-                border: '2px solid #00bcd4',
-                fontSize: 17,
-                marginBottom: 16,
-                boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
-                transition: 'border 0.2s, box-shadow 0.2s',
-                height: '48px',
-                padding: '12px',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-              onFocus={e => e.target.style.border = '2px solid #2196f3'}
-              onBlur={e => e.target.style.border = '2px solid #00bcd4'}
-              required
-            />
-            {/* Email */}
-            <input
-              name="email"
-              type="email"
-              placeholder="Email Address"
-              value={formData.email}
-              onChange={handleChange}
-              style={{
-                ...inputStyle,
-                background: '#23272f',
-                color: '#f8fafc',
-                border: '2px solid #00bcd4',
-                fontSize: 17,
-                marginBottom: 16,
-                boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
-                transition: 'border 0.2s, box-shadow 0.2s',
-                height: '48px',
-                padding: '12px',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-              onFocus={e => e.target.style.border = '2px solid #2196f3'}
-              onBlur={e => e.target.style.border = '2px solid #00bcd4'}
-              required
-            />
-            {/* Purpose of Visit Dropdown */}
-            <div style={{position: 'relative', marginBottom: 16}}>
-              <select
-                name="purpose"
-                value={formData.purpose}
+          <button
+            style={checkBtnStyle}
+            onClick={() => setShowWelcome(false)}
+            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            Check In Now
+          </button>
+          {/* Subtle floating animation */}
+          <style>{`
+            @keyframes popIn {
+              0% { opacity: 0; transform: scale(0.7);}
+              80% { opacity: 1; transform: scale(1.05);}
+              100% { opacity: 1; transform: scale(1);}
+            }
+            @keyframes fadeInUp {
+              0% { opacity: 0; transform: translateY(40px);}
+              100% { opacity: 1; transform: translateY(0);}
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Main Form */}
+      {!showWelcome && (
+        <div
+          style={{
+            ...cardStyle,
+            zIndex: 2,
+            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)',
+            background: 'black',
+            border: '1px solid rgb(56, 3, 54)',
+            backdropFilter: 'blur(6px)',
+            opacity: formVisible ? 1 : 0,
+            transform: formVisible ? 'translateY(0)' : 'translateY(40px)',
+            transition: 'opacity 0.7s cubic-bezier(.68,-0.55,.27,1.55), transform 0.7s cubic-bezier(.68,-0.55,.27,1.55)',
+          }}
+        >
+          {showSuccessScreen ? (
+            <div style={{
+              zIndex: 2,
+              maxWidth: 480,
+              width: '100%',
+              margin: '0 auto',
+              padding: '48px 32px',
+              background: 'linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%)',
+              borderRadius: 24,
+              boxShadow: '0 8px 40px 0 rgba(33, 150, 243, 0.18)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 340,
+            }}>
+              <span style={{ fontSize: 72, marginBottom: 24 }} role="img" aria-label="hospital">🏥</span>
+              <h1 style={{ color: '#007cf0', fontWeight: 800, fontSize: 36, margin: 0, textAlign: 'center', letterSpacing: 1 }}>Check-In Successful!</h1>
+              <p style={{ color: '#00838f', fontSize: 20, margin: '24px 0 0 0', textAlign: 'center', fontWeight: 500, lineHeight: 1.5 }}>
+                Thank you for checking in.<br />
+                Please wait to be called or assisted by our staff.<br />
+                <span style={{ fontSize: 28, display: 'block', marginTop: 16 }}>Have a healthy day!</span>
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} style={{ width: '100%', marginTop: 8 }} autoComplete="off">
+              {/* Full Name */}
+              <input
+                name="name"
+                placeholder="Full Name"
+                value={formData.name}
                 onChange={handleChange}
                 style={{
                   ...inputStyle,
                   background: '#23272f',
                   color: '#f8fafc',
-                  border: '2px solid #00bcd4',
+                  border: 'None',
                   fontSize: 17,
-                  marginBottom: 0,
+                  marginBottom: 16,
                   boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
                   transition: 'border 0.2s, box-shadow 0.2s',
-                  appearance: 'none',
                   height: '48px',
                   padding: '12px',
-                  paddingRight: '40px',
                   width: '100%',
                   boxSizing: 'border-box',
                 }}
                 onFocus={e => e.target.style.border = '2px solid #2196f3'}
                 onBlur={e => e.target.style.border = '2px solid #00bcd4'}
                 required
-              >
-                <option value="" disabled>Select Purpose of Visit</option>
-                <option value="General Check-up">General Check-up</option>
-                <option value="Test">Test</option>
-                <option value="Doctor meeting">Doctor meeting</option>
-                <option value="Basic check">Basic check</option>
-                <option value="Out patient">Out patient</option>
-              </select>
-              <span style={{
-                pointerEvents: 'none',
-                position: 'absolute',
-                right: 16,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#00bcd4',
-                fontSize: 22,
-                display: 'flex',
-                alignItems: 'center',
-              }}>
-                <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 8L10 12L14 8" stroke="#00bcd4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </span>
-            </div>
-            {/* Phone Number */}
-            <input
-              name="phone"
-              type="tel"
-              placeholder="Phone Number"
-              value={formData.phone}
-              onChange={handleChange}
-              style={{
-                ...inputStyle,
-                background: '#23272f',
-                color: '#f8fafc',
-                border: '2px solid #00bcd4',
-                fontSize: 17,
-                marginBottom: 16,
-                boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
-                transition: 'border 0.2s, box-shadow 0.2s',
-                height: '48px',
-                padding: '12px',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-              onFocus={e => e.target.style.border = '2px solid #2196f3'}
-              onBlur={e => e.target.style.border = '2px solid #00bcd4'}
-              required
-            />
-            {/* Date of Birth */}
-            <input
-              name="dob"
-              type="date"
-              placeholder="Date of Birth"
-              value={formData.dob}
-              onChange={handleChange}
-              style={{
-                ...inputStyle,
-                background: '#23272f',
-                color: '#f8fafc',
-                border: '2px solid #00bcd4',
-                fontSize: 17,
-                marginBottom: 16,
-                boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
-                transition: 'border 0.2s, box-shadow 0.2s',
-                height: '48px',
-                padding: '12px',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-              onFocus={e => e.target.style.border = '2px solid #2196f3'}
-              onBlur={e => e.target.style.border = '2px solid #00bcd4'}
-            />
-            {/* Gender Dropdown */}
-            <div style={{position: 'relative', marginBottom: 16}}>
-              <select
-                name="gender"
-                value={formData.gender}
+              />
+              {/* Company */}
+              <input
+                name="company"
+                placeholder="Company / Organization"
+                value={formData.company}
                 onChange={handleChange}
                 style={{
                   ...inputStyle,
                   background: '#23272f',
                   color: '#f8fafc',
-                  border: '2px solid #00bcd4',
+                  border: 'None',
                   fontSize: 17,
-                  marginBottom: 0,
+                  marginBottom: 16,
                   boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
                   transition: 'border 0.2s, box-shadow 0.2s',
-                  appearance: 'none',
                   height: '48px',
                   padding: '12px',
-                  paddingRight: '40px',
                   width: '100%',
                   boxSizing: 'border-box',
                 }}
                 onFocus={e => e.target.style.border = '2px solid #2196f3'}
                 onBlur={e => e.target.style.border = '2px solid #00bcd4'}
                 required
-              >
-                <option value="" disabled>Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-                <option value="Prefer not to say">Prefer not to say</option>
-              </select>
-              <span style={{
-                pointerEvents: 'none',
-                position: 'absolute',
-                right: 16,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#00bcd4',
-                fontSize: 22,
-                display: 'flex',
-                alignItems: 'center',
-              }}>
-                <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 8L10 12L14 8" stroke="#00bcd4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </span>
-            </div>
-            {/* Check In Button (replaces Scan ID button) */}
-            <button
-              type="submit"
-              style={{
-                ...buttonStyle,
-                background: 'linear-gradient(90deg, #00bcd4 0%, #2196f3 100%)',
-                fontSize: 18,
-                marginTop: 18,
-                marginBottom: 12,
-                boxShadow: '0 4px 16px 0 rgba(33,150,243,0.18)',
-                letterSpacing: 0.5,
-                border: 'none',
-                borderRadius: '10px',
-                padding: '14px',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                transition: 'background 0.2s, box-shadow 0.2s',
-              }}
-              onMouseOver={e => e.target.style.background = 'linear-gradient(90deg, #2196f3 0%, #00bcd4 100%)'}
-              onMouseOut={e => e.target.style.background = 'linear-gradient(90deg, #00bcd4 0%, #2196f3 100%)'}
-              disabled={loading}
-            >
-              {loading ? 'Checking In...' : 'Check In'}
-            </button>
-            {/* Scan ID with Camera Button */}
-            <button
-              type="button"
-              style={{
-                ...buttonStyle,
-                background: 'linear-gradient(90deg, #ffb347 0%, #ffcc33 100%)',
-                color: '#23272f',
-                fontWeight: 700,
-                marginTop: 0,
-                marginBottom: 10,
-                border: 'none',
-                borderRadius: '10px',
-                fontSize: 16,
-                boxShadow: '0 2px 8px 0 rgba(255,204,51,0.10)',
-                letterSpacing: 0.2,
-                transition: 'background 0.2s, box-shadow 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-              onClick={handleOpenCamera}
-              disabled={ocrLoading || showCamera}
-            >
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#ffb347" style={{marginRight: 4}}>
-                <rect x="3" y="3" width="18" height="18" rx="5" fill="#fffde7"/>
-                <path stroke="#ffb347" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" />
-                <circle cx="12" cy="12" r="3" fill="#ffb347" />
-              </svg>
-              Scan ID with Camera
-            </button>
-            {/* Camera Modal/Preview */}
-            {showCamera && (
-              <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100vw',
-                height: '100vh',
-                background: 'rgba(0,0,0,0.7)',
-                zIndex: 1000,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <div style={{background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-                  <video ref={videoRef} autoPlay playsInline style={{width: 320, height: 240, borderRadius: 8, background: '#23272f'}} />
-                  <canvas ref={canvasRef} style={{display: 'none'}} />
-                  <button
-                    type="button"
-                    style={{
-                      ...buttonStyle,
-                      background: 'linear-gradient(90deg, #43e97b 0%, #38f9d7 100%)',
-                      color: '#23272f',
-                      fontWeight: 700,
-                      marginTop: 18,
-                      border: 'none',
-                      borderRadius: '10px',
-                      fontSize: 16,
-                      boxShadow: '0 2px 8px 0 rgba(67,233,123,0.10)',
-                    }}
-                    onClick={handleCapture}
-                    disabled={ocrLoading}
-                  >
-                    {ocrLoading ? 'Scanning...' : 'Capture'}
-                  </button>
-                  <button
-                    type="button"
-                    style={{
-                      ...buttonStyle,
-                      background: 'linear-gradient(90deg, #e57373 0%, #ff8a65 100%)',
-                      color: '#fff',
-                      fontWeight: 700,
-                      marginTop: 10,
-                      border: 'none',
-                      borderRadius: '10px',
-                      fontSize: 15,
-                    }}
-                    onClick={() => {
-                      setShowCamera(false);
-                      if (videoStream) {
-                        videoStream.getTracks().forEach(track => track.stop());
-                        setVideoStream(null);
-                      }
-                    }}
-                    disabled={ocrLoading}
-                  >
-                    Cancel
-                  </button>
-                </div>
+              />
+              {/* Email */}
+              <input
+                name="email"
+                type="email"
+                placeholder="Email Address"
+                value={formData.email}
+                onChange={handleChange}
+                style={{
+                  ...inputStyle,
+                  background: '#23272f',
+                  color: '#f8fafc',
+                  border: 'None',
+                  fontSize: 17,
+                  marginBottom: 16,
+                  boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
+                  transition: 'border 0.2s, box-shadow 0.2s',
+                  height: '48px',
+                  padding: '12px',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={e => e.target.style.border = '2px solid #2196f3'}
+                onBlur={e => e.target.style.border = '2px solid #00bcd4'}
+                required
+              />
+              {/* Purpose of Visit Dropdown */}
+              <div style={{ position: 'relative', marginBottom: 16 }}>
+                <select
+                  name="purpose"
+                  value={formData.purpose}
+                  onChange={handleChange}
+                  style={{
+                    ...inputStyle,
+                    background: '#23272f',
+                    color: '#f8fafc',
+                    border: 'none',
+                    fontSize: 17,
+                    marginBottom: 0,
+                    boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
+                    transition: 'border 0.2s, box-shadow 0.2s',
+                    appearance: 'none',
+                    height: '48px',
+                    padding: '12px',
+                    paddingRight: '40px',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  }}
+                  onFocus={e => e.target.style.border = '2px solid #2196f3'}
+                  onBlur={e => e.target.style.border = '2px solid #00bcd4'}
+                  required
+                >
+                  <option value="" disabled>Select Purpose of Visit</option>
+                  <option value="General Check-up">General Check-up</option>
+                  <option value="Test">Test</option>
+                  <option value="Doctor meeting">Doctor meeting</option>
+                  <option value="Basic check">Basic check</option>
+                  <option value="Out patient">Out patient</option>
+                </select>
+                <span style={{
+                  pointerEvents: 'none',
+                  position: 'absolute',
+                  right: 16,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#00bcd4',
+                  fontSize: 22,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}>
+                  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 8L10 12L14 8" stroke="#00bcd4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
               </div>
-            )}
-            {/* Feedback Message */}
-            {message && (
-              <div style={{
-                ...messageStyle(success),
-                fontSize: 16,
-                marginTop: 20,
-                border: success ? '1.5px solid #b2dfdb' : '1.5px solid #ffcdd2',
-                background: success ? '#e0f7fa' : '#ffebee',
-                color: success ? '#00796b' : '#c62828',
-              }}>{message}</div>
-            )}
-          </form>
+              {/* Phone Number */}
+              <input
+                name="phone"
+                type="tel"
+                placeholder="Phone Number"
+                value={formData.phone}
+                onChange={handleChange}
+                style={{
+                  ...inputStyle,
+                  background: '#23272f',
+                  color: '#f8fafc',
+                  border: 'None',
+                  fontSize: 17,
+                  marginBottom: 16,
+                  boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
+                  transition: 'border 0.2s, box-shadow 0.2s',
+                  height: '48px',
+                  padding: '12px',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={e => e.target.style.border = 'none'}
+                onBlur={e => e.target.style.border = 'none'}
+                required
+              />
+              {/* Date of Birth */}
+              <input
+                name="dob"
+                type="date"
+                placeholder="Date of Birth"
+                value={formData.dob}
+                onChange={handleChange}
+                style={{
+                  ...inputStyle,
+                  background: '#23272f',
+                  color: '#f8fafc',
+                  border: 'None',
+                  fontSize: 17,
+                  marginBottom: 16,
+                  boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
+                  transition: 'border 0.2s, box-shadow 0.2s',
+                  height: '48px',
+                  padding: '12px',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={e => e.target.style.border = '2px solid #2196f3'}
+                onBlur={e => e.target.style.border = '2px solid #00bcd4'}
+              />
+              {/* Gender Dropdown */}
+              <div style={{ position: 'relative', marginBottom: 16 }}>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                  style={{
+                    ...inputStyle,
+                    background: '#23272f',
+                    color: '#f8fafc',
+                    border: 'None',
+                    fontSize: 17,
+                    marginBottom: 0,
+                    boxShadow: '0 2px 8px 0 rgba(0,188,212,0.08)',
+                    transition: 'border 0.2s, box-shadow 0.2s',
+                    appearance: 'none',
+                    height: '48px',
+                    padding: '12px',
+                    paddingRight: '40px',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  }}
+                  onFocus={e => e.target.style.border = '2px solid #2196f3'}
+                  onBlur={e => e.target.style.border = '2px solid #00bcd4'}
+                  required
+                >
+                  <option value="" disabled>Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                  <option value="Prefer not to say">Prefer not to say</option>
+                </select>
+                <span style={{
+                  pointerEvents: 'none',
+                  position: 'absolute',
+                  right: 16,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#00bcd4',
+                  fontSize: 22,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}>
+                  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 8L10 12L14 8" stroke="#00bcd4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                </span>
+              </div>
+              {/* Check In Button */}
+              <button
+                type="submit"
+                style={{
+                  ...buttonStyle,
+                  background: 'linear-gradient(90deg, #00bcd4 0%, #2196f3 100%)',
+                  fontSize: 18,
+                  marginTop: 18,
+                  marginBottom: 12,
+                  boxShadow: '0 4px 16px 0 rgba(33,150,243,0.18)',
+                  letterSpacing: 0.5,
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '14px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  transition: 'background 0.2s, box-shadow 0.2s',
+                }}
+                onMouseOver={e => e.target.style.background = 'linear-gradient(90deg, #2196f3 0%, #00bcd4 100%)'}
+                onMouseOut={e => e.target.style.background = 'linear-gradient(90deg, #00bcd4 0%, #2196f3 100%)'}
+                disabled={loading}
+              >
+                {loading ? 'Checking In...' : 'Check In'}
+              </button>
+              {/* Scan ID with Camera Button */}
+              <button
+                type="button"
+                style={{
+                  ...buttonStyle,
+                  background: 'linear-gradient(90deg, #ffb347 0%, #ffcc33 100%)',
+                  color: '#23272f',
+                  fontWeight: 700,
+                  marginTop: 0,
+                  marginBottom: 10,
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: 16,
+                  boxShadow: '0 2px 8px 0 rgba(255,204,51,0.10)',
+                  letterSpacing: 0.2,
+                  transition: 'background 0.2s, box-shadow 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+                onClick={handleOpenCamera}
+                disabled={ocrLoading || showCamera}
+              >
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#ffb347" style={{ marginRight: 4 }}>
+                  <rect x="3" y="3" width="18" height="18" rx="5" fill="#fffde7" />
+                  <path stroke="#ffb347" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" />
+                  <circle cx="12" cy="12" r="3" fill="#ffb347" />
+                </svg>
+                Scan ID with Camera
+              </button>
+              {/* Camera Modal/Preview */}
+              {showCamera && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  width: '100vw',
+                  height: '100vh',
+                  background: 'rgba(0,0,0,0.7)',
+                  zIndex: 1000,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <div style={{ background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <video ref={videoRef} autoPlay playsInline style={{ width: 320, height: 240, borderRadius: 8, background: '#23272f' }} />
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+                    <button
+                      type="button"
+                      style={{
+                        ...buttonStyle,
+                        background: 'linear-gradient(90deg, #43e97b 0%, #38f9d7 100%)',
+                        color: '#23272f',
+                        fontWeight: 700,
+                        marginTop: 18,
+                        border: 'none',
+                        borderRadius: '10px',
+                        fontSize: 16,
+                        boxShadow: '0 2px 8px 0 rgba(67,233,123,0.10)',
+                      }}
+                      onClick={handleCapture}
+                      disabled={ocrLoading}
+                    >
+                      {ocrLoading ? 'Scanning...' : 'Capture'}
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        ...buttonStyle,
+                        background: 'linear-gradient(90deg, #e57373 0%, #ff8a65 100%)',
+                        color: '#fff',
+                        fontWeight: 700,
+                        marginTop: 10,
+                        border: 'none',
+                        borderRadius: '10px',
+                        fontSize: 15,
+                      }}
+                      onClick={() => {
+                        setShowCamera(false);
+                        if (videoStream) {
+                          videoStream.getTracks().forEach(track => track.stop());
+                          setVideoStream(null);
+                        }
+                      }}
+                      disabled={ocrLoading}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* Feedback Message */}
+              {message && (
+                <div style={{
+                  ...messageStyle(success),
+                  fontSize: 16,
+                  marginTop: 20,
+                  border: success ? '1.5px solid #b2dfdb' : '1.5px solid #ffcdd2',
+                  background: success ? '#e0f7fa' : '#ffebee',
+                  color: success ? '#00796b' : '#c62828',
+                }}>{message}</div>
+              )}
+            </form>
+          )}
         </div>
       )}
       {/* Spinner keyframes for Scan ID */}

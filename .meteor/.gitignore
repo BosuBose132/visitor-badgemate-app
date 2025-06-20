@@ -1,1 +1,58 @@
 local
+service-account.json
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Meteor-specific
+.meteor/local/
+.meteor/meteor-simulate-*
+
+# Environment and secrets
+.env
+*.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+service.json
+google-vision-key.json
+server/keys/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+.idea/
+
+# Build outputs
+bundle/
+dist/
+build/
+coverage/
+*.tgz
+
+# Logs
+logs/
+*.log
+
+# Docker files
+.dockerignore
+Dockerfile*
+docker-compose.yml
+docker-compose.override.yml
+.docker/
+
+# Git itself
+.git/
+
+# Optional: any backups or temp files
+*.bak
+*.swp
