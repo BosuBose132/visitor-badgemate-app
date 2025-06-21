@@ -38,6 +38,7 @@ Node.js NPM Package – Shared logic between multiple
 
 This project uses a custom NPM package for visitor validation and schema handling with the command:
 npm install visitor-npm-app
+https://github.com/BosuBose132/visitor-npm-app-package
 
 #Google Vision OCR Setup
 To use Google Vision OCR:
