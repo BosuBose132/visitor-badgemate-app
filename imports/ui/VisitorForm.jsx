@@ -434,7 +434,7 @@ const VisitorForm = () => {
             alt="Hospital"
             style={hospitalImgStyle}
           />
-          <h1 style={welcomeTitleStyle}>Welcome to <span style={{ color: '#00bcd4' }}>Acme Hospital</span></h1>
+          <h1 style={welcomeTitleStyle}>Welcome to <span style={{ color: '#00bcd4' }}>MIE</span></h1>
           <div style={welcomeDescStyle}>
             Your health and safety are our priority.<br />
             Please check in to continue.
@@ -445,7 +445,7 @@ const VisitorForm = () => {
             onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
             onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            Check In Visitor
+            Check In Now
           </button>
           {/* Subtle floating animation */}
           <style>{`
@@ -477,8 +477,6 @@ const VisitorForm = () => {
             transition: 'opacity 0.7s cubic-bezier(.68,-0.55,.27,1.55), transform 0.7s cubic-bezier(.68,-0.55,.27,1.55)',
           }}
         >
-          {/* Success screen, form, camera modal, etc. */}
-          {/* (Paste your form JSX here, unchanged) */}
           {showSuccessScreen ? (
             <div style={{
               zIndex: 2,
@@ -721,7 +719,7 @@ const VisitorForm = () => {
                 }}>
                   <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 8L10 12L14 8" stroke="#00bcd4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                </svg>
                 </span>
               </div>
               {/* Check In Button */}
