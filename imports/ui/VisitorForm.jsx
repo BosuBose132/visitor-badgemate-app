@@ -2,7 +2,7 @@
 // On submit, call Meteor method 'visitors.checkIn'
 // Show success or duplicate message
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Meteor } from 'meteor/meteor';
 
 // ...styles from your original code...
@@ -404,11 +404,229 @@ const VisitorForm = () => {
 
   // Animation for form entrance
   const [formVisible, setFormVisible] = useState(false);
-  React.useEffect(() => {
+  useEffect(() => {
     if (!showWelcome) {
       setTimeout(() => setFormVisible(true), 100);
     }
   }, [showWelcome]);
+
+  // Camera overlay component
+  const ID_BOX_WIDTH = 260;
+  const ID_BOX_HEIGHT = 160;
+  const [showCameraOverlay, setShowCameraOverlay] = useState(false);
+  const [idBoxAligned, setIdBoxAligned] = useState(false);
+  const [holdTimer, setHoldTimer] = useState(null);
+  const [capturedImage, setCapturedImage] = useState(null);
+
+  // Open camera overlay
+  const handleOpenCameraOverlay = async () => {
+    setShowCameraOverlay(true);
+    setCapturedImage(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setVideoStream(stream);
+    } catch (e) {
+      alert('Camera access denied.');
+      setShowCameraOverlay(false);
+    }
+  };
+
+  // Attach stream to video
+  useEffect(() => {
+    if (showCameraOverlay && videoRef.current && videoStream) {
+      videoRef.current.srcObject = videoStream;
+      videoRef.current.play();
+    }
+    return () => {
+      if (videoStream) {
+        videoStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [showCameraOverlay, videoStream]);
+
+  // Detection logic + auto-capture
+  useEffect(() => {
+    let interval;
+    let timer = holdTimer;
+    if (showCameraOverlay && videoRef.current && canvasRef.current) {
+      interval = setInterval(() => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (
+          !video ||
+          !canvas ||
+          !video.videoWidth ||
+          !video.videoHeight ||
+          video.readyState < 2
+        ) {
+          setIdBoxAligned(false);
+          return;
+        }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Get image data from the box region
+        const boxX = (canvas.width - ID_BOX_WIDTH) / 2;
+        const boxY = (canvas.height - ID_BOX_HEIGHT) / 2;
+        let imageData;
+        try {
+          imageData = ctx.getImageData(boxX, boxY, ID_BOX_WIDTH, ID_BOX_HEIGHT);
+        } catch {
+          setIdBoxAligned(false);
+          return;
+        }
+
+        // Simple contrast detection
+        let sum = 0,
+          sumSq = 0,
+          count = 0;
+        for (let i = 0; i < imageData.data.length; i += 4) {
+          const brightness =
+            (imageData.data[i] +
+              imageData.data[i + 1] +
+              imageData.data[i + 2]) /
+            3;
+          sum += brightness;
+          sumSq += brightness * brightness;
+          count++;
+        }
+        const mean = sum / count;
+        const variance = sumSq / count - mean * mean;
+        const stddev = Math.sqrt(variance);
+
+        const aligned = stddev > 28;
+        setIdBoxAligned(aligned);
+
+        // Auto-capture logic
+        if (aligned && !timer && !capturedImage) {
+          timer = setTimeout(() => {
+            // Capture image from the box region
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = ID_BOX_WIDTH;
+            captureCanvas.height = ID_BOX_HEIGHT;
+            const captureCtx = captureCanvas.getContext('2d');
+            captureCtx.drawImage(
+              video,
+              boxX,
+              boxY,
+              ID_BOX_WIDTH,
+              ID_BOX_HEIGHT,
+              0,
+              0,
+              ID_BOX_WIDTH,
+              ID_BOX_HEIGHT
+            );
+            const dataUrl = captureCanvas.toDataURL('image/png');
+            setCapturedImage(dataUrl);
+            setShowCameraOverlay(false);
+            setIdBoxAligned(false);
+            setHoldTimer(null);
+          }, 3000); // 3 seconds
+          setHoldTimer(timer);
+        } else if (!aligned && timer) {
+          clearTimeout(timer);
+          setHoldTimer(null);
+        }
+      }, 350);
+    }
+    return () => {
+      clearInterval(interval);
+      if (holdTimer) clearTimeout(holdTimer);
+    };
+    // eslint-disable-next-line
+  }, [showCameraOverlay, capturedImage]);
+
+  // Reset timer if alignment lost
+  useEffect(() => {
+    if (!idBoxAligned && holdTimer) {
+      clearTimeout(holdTimer);
+      setHoldTimer(null);
+    }
+    // eslint-disable-next-line
+  }, [idBoxAligned]);
+
+  // Add state for Google Vision text detection
+  const [mainIdBoxAligned, setMainIdBoxAligned] = useState(false);
+  const [mainHoldTimer, setMainHoldTimer] = useState(null);
+  const [mainOcrChecking, setMainOcrChecking] = useState(false);
+
+  // Google Vision-based detection for ID card (text presence)
+  useEffect(() => {
+    let interval;
+    let timer = mainHoldTimer;
+    if (showCamera && videoRef.current && canvasRef.current) {
+      interval = setInterval(() => {
+        if (mainOcrChecking) return;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !canvas || !video.videoWidth || !video.videoHeight || video.readyState < 2) {
+          setMainIdBoxAligned(false);
+          return;
+        }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const boxX = (canvas.width - ID_BOX_WIDTH) / 2;
+        const boxY = (canvas.height - ID_BOX_HEIGHT) / 2;
+        // Grab the box region as a data URL
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = ID_BOX_WIDTH;
+        tempCanvas.height = ID_BOX_HEIGHT;
+        tempCanvas.getContext('2d').drawImage(
+          video,
+          boxX,
+          boxY,
+          ID_BOX_WIDTH,
+          ID_BOX_HEIGHT,
+          0,
+          0,
+          ID_BOX_WIDTH,
+          ID_BOX_HEIGHT
+        );
+        const dataUrl = tempCanvas.toDataURL('image/png');
+        setMainOcrChecking(true);
+        Meteor.call('visitors.processOCR', dataUrl, (error, result) => {
+          setMainOcrChecking(false);
+          const resultText = result?.text || '';
+          // Only align if text is detected (at least 8 non-space chars)
+          const aligned = resultText && resultText.replace(/\s/g, '').length > 8;
+          setMainIdBoxAligned(aligned);
+          if (aligned && !timer) {
+            timer = setTimeout(() => {
+              const modal = document.querySelector('[style*="z-index: 1000"]');
+              if (modal) {
+                const captureBtn = Array.from(modal.querySelectorAll('button')).find(
+                  btn => btn.textContent && btn.textContent.toLowerCase().includes('capture') && !btn.disabled
+                );
+                if (captureBtn) captureBtn.click();
+              }
+              setMainHoldTimer(null);
+            }, 3000);
+            setMainHoldTimer(timer);
+          } else if (!aligned && timer) {
+            clearTimeout(timer);
+            setMainHoldTimer(null);
+          }
+        });
+      }, 1200); // check every 1.2s to avoid API spam
+    }
+    return () => {
+      clearInterval(interval);
+      if (mainHoldTimer) clearTimeout(mainHoldTimer);
+    };
+    // eslint-disable-next-line
+  }, [showCamera]);
+
+  useEffect(() => {
+    if (!mainIdBoxAligned && mainHoldTimer) {
+      clearTimeout(mainHoldTimer);
+      setMainHoldTimer(null);
+    }
+    // eslint-disable-next-line
+  }, [mainIdBoxAligned]);
 
   return (
     <div style={{
@@ -792,7 +1010,49 @@ const VisitorForm = () => {
                   justifyContent: 'center',
                 }}>
                   <div style={{ background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <video ref={videoRef} autoPlay playsInline style={{ width: 320, height: 240, borderRadius: 8, background: '#23272f' }} />
+                    <div style={{ position: 'relative', width: 320, height: 240 }}>
+                      <video ref={videoRef} autoPlay playsInline style={{ width: 320, height: 240, borderRadius: 8, background: '#23272f', objectFit: 'cover' }} />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: (320 - ID_BOX_WIDTH) / 2,
+                          top: (240 - ID_BOX_HEIGHT) / 2,
+                          width: ID_BOX_WIDTH,
+                          height: ID_BOX_HEIGHT,
+                          border: `3px solid ${mainIdBoxAligned ? '#43e97b' : '#00bcd4'}`,
+                          borderRadius: 12,
+                          boxSizing: 'border-box',
+                          pointerEvents: 'none',
+                          transition: 'border 0.2s',
+                          zIndex: 2,
+                          background: 'rgba(255,255,255,0.01)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: mainIdBoxAligned ? '#43e97b' : '#00bcd4',
+                            fontWeight: 600,
+                            fontSize: 15,
+                            background: 'rgba(255,255,255,0.7)',
+                            borderRadius: 6,
+                            padding: '2px 8px',
+                            position: 'absolute',
+                            top: -28,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            zIndex: 3,
+                            letterSpacing: 0.2,
+                          }}
+                        >
+                          {mainIdBoxAligned
+                            ? 'Hold steady! Capturing in 3s...'
+                            : 'Align your ID card here'}
+                        </span>
+                      </div>
+                    </div>
                     <canvas ref={canvasRef} style={{ display: 'none' }} />
                     <button
                       type="button"
@@ -834,6 +1094,112 @@ const VisitorForm = () => {
                       disabled={ocrLoading}
                     >
                       Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* Camera Overlay Component */}
+              {showCameraOverlay && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    background: 'rgba(0,0,0,0.7)',
+                    zIndex: 1000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      background: '#fff',
+                      borderRadius: 12,
+                      padding: 24,
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      position: 'relative',
+                    }}
+                  >
+                    <div style={{ position: 'relative', width: 340, height: 260 }}>
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        style={{
+                          width: 340,
+                          height: 260,
+                          borderRadius: 8,
+                          background: '#23272f',
+                          objectFit: 'cover',
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: (340 - ID_BOX_WIDTH) / 2,
+                          top: (260 - ID_BOX_HEIGHT) / 2,
+                          width: ID_BOX_WIDTH,
+                          height: ID_BOX_HEIGHT,
+                          border: `3px solid ${idBoxAligned ? '#43e97b' : '#00bcd4'}`,
+                          borderRadius: 12,
+                          boxSizing: 'border-box',
+                          pointerEvents: 'none',
+                          transition: 'border 0.2s',
+                          zIndex: 2,
+                          background: 'rgba(255,255,255,0.01)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: idBoxAligned ? '#43e97b' : '#00bcd4',
+                            fontWeight: 600,
+                            fontSize: 15,
+                            background: 'rgba(255,255,255,0.7)',
+                            borderRadius: 6,
+                            padding: '2px 8px',
+                            position: 'absolute',
+                            top: -28,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            zIndex: 3,
+                            letterSpacing: 0.2,
+                          }}
+                        >
+                          {idBoxAligned
+                            ? 'Hold steady! Capturing in 3s...'
+                            : 'Align your ID card here'}
+                        </span>
+                      </div>
+                    </div>
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+                    <button
+                      type="button"
+                      style={{
+                        marginTop: 18,
+                        border: 'none',
+                        borderRadius: '10px',
+                        fontSize: 16,
+                      }}
+                      onClick={() => {
+                        setShowCameraOverlay(false);
+                        if (videoStream) {
+                          videoStream.getTracks().forEach((track) => track.stop());
+                          setVideoStream(null);
+                        }
+                        setIdBoxAligned(false);
+                        if (holdTimer) clearTimeout(holdTimer);
+                      }}
+                    >
+                      Close
                     </button>
                   </div>
                 </div>
