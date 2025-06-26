@@ -54,7 +54,7 @@ Meteor.methods({
         },
         {
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            'Authorization': `BHSK-sandbox-T5otgZ8z2T2AHZE_OiKVMNp2ullbgVD53tyGQwbi`,
             'Content-Type': 'application/json'
           }
         }
