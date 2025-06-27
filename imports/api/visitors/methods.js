@@ -43,29 +43,30 @@ Meteor.methods({
   async 'visitors.processOCR'(base64Image) {
     check(base64Image, String);
 
-    const apiKey = Meteor.settings.ozwell.secretKey;
+   
+    const ozwellApiKey = Meteor.settings.ozwell.apiKey;
+    const ozwellSecretKey = Meteor.settings.ozwell.secretKey;
+
 
     try {
       const response = await axios.post(
-        'https://api.ozwell.ai/ocr?utm_source=bluehive&utm_medium=chat&utm_campaign=bluehive-ai',
+        'https://api.ozwell.ai/v1/ocr?utm_source=bluehive&utm_medium=chat&utm_campaign=bluehive-ai',
         {
           image: base64Image,
           documentType: 'id_card'
         },
         {
           headers: {
-            'Authorization': `BHSK-sandbox-T5otgZ8z2T2AHZE_OiKVMNp2ullbgVD53tyGQwbi`,
+            'Authorization': `Bearer BHPK-sandbox-4nCfAhL8AuTIikzLW9_lKkot202K3TboCFKiQ8xX`,
             'Content-Type': 'application/json'
-          }
+          },
         }
       );
 
       return response.data;
     } catch (error) {
-      console.error("Ozwell OCR API failed:", error.message);
+      console.error("Ozwell OCR API failed:", error.response?.data || error.message);
       throw new Meteor.Error('ozwell-ocr-failed', 'Could not process ID image');
     }
   }
-  
-
 });
