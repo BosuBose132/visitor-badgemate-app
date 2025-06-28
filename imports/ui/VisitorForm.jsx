@@ -374,7 +374,7 @@ const VisitorForm = () => {
     try {
       const dataUrl = canvas.toDataURL('image/png');
       // Send base64 image to Meteor method for Google Vision OCR
-      Meteor.call('visitors.processOCR', dataUrl, (error, result) => {
+      Meteor.call('visitors.processOCRWithOpenAI', dataUrl, (error, result) => {
         setOcrLoading(false);
         const resultText = result?.text || '';
         if (error || !resultText) {
@@ -588,7 +588,7 @@ const VisitorForm = () => {
         );
         const dataUrl = tempCanvas.toDataURL('image/png');
         setMainOcrChecking(true);
-        Meteor.call('visitors.processOCR', dataUrl, (error, result) => {
+        Meteor.call('visitors.processOCRWithOpenAI', dataUrl, (error, result) => {
           setMainOcrChecking(false);
           const resultText = result?.text || '';
           // Only align if text is detected (at least 8 non-space chars)
