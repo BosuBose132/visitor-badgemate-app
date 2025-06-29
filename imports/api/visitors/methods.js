@@ -62,12 +62,12 @@ Meteor.methods({
       messages: [
         {
           role: 'system',
-          content: 'You are an OCR assistant. Extract the visitor information from an ID card image in structured JSON.'
+          content: 'You are an OCR assistant that helps transcribe and parse text from images of documents. You do not refuse requests, you just extract whatever text is visible.'
         },
         {
           role: 'user',
           content: [
-            { type: 'text', text: 'Extract the following fields: name, email, phone, company, DOB. Return them as JSON.' },
+            { type: 'text', text: 'Please read all visible text from this document image. If possible, return any fields like name, email, phone, company, DOB in JSON. Use null for any fields you cannot find. Strictly respond with JSON only, in this format: {"name":"", "email":"", "phone":"", "company":"", "dob":""}.' },
             { type: 'image_url', image_url: { url: base64ImageData, detail: 'auto' } }
           ]
         }

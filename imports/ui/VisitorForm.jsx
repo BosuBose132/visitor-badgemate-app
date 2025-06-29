@@ -383,15 +383,24 @@ const VisitorForm = () => {
           return;
         }
         // Use the improved extraction function
-        const { name, company, email, phone, dob } = extractVisitorFields(resultText);
-        setFormData(prev => ({
-          ...prev,
-          name: name || prev.name,
-          company: company || prev.company,
-          email: email || prev.email,
-          phone: phone || prev.phone,
-          dob: dob || prev.dob,
-        }));
+        let fields;
+        try {
+          fields = JSON.parse(resultText);
+        } catch (err) {
+          console.error('Error parsing OCR JSON:', err, resultText);
+          setMessage('Failed to parse OCR result. Please try again.');
+          setSuccess(false);
+          return;
+        }
+        setFormData(prev => {
+          const updated = { ...prev };
+          if (fields.name) updated.name = fields.name;
+          if (fields.company) updated.company = fields.company;
+          if (fields.email) updated.email = fields.email;
+          if (fields.phone) updated.phone = fields.phone;
+          if (fields.dob) updated.dob = fields.dob;
+          return updated;
+        });
         setMessage('ID scanned from camera! Please verify and complete the form.');
         setSuccess(true);
       });
@@ -937,7 +946,7 @@ const VisitorForm = () => {
                 }}>
                   <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 8L10 12L14 8" stroke="#00bcd4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                  </svg>
                 </span>
               </div>
               {/* Check In Button */}
