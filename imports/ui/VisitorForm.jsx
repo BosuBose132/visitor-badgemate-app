@@ -5,6 +5,28 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Meteor } from 'meteor/meteor';
 
+
+function normalizeDateForInput(dateStr) {
+  if (!dateStr) return '';
+  dateStr = dateStr.trim();
+
+  // If it's already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+
+  // Assume DD/MM/YYYY
+  const parts = dateStr.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    const day = parts[0].padStart(2, '0');
+    const month = parts[1].padStart(2, '0');
+    const year = parts[2];
+    return `${year}-${day}-${month}`;
+  }
+
+  return '';
+}
+
 // ...styles from your original code...
 const cardStyle = {
   maxWidth: '400px',
@@ -409,7 +431,9 @@ const VisitorForm = () => {
           if (fields.company) updated.company = fields.company;
           if (fields.email) updated.email = fields.email;
           if (fields.phone) updated.phone = fields.phone;
-          if (fields.dob) updated.dob = fields.dob;
+          if (fields.dob) updated.dob = normalizeDateForInput(fields.dob);
+          const gender = fields.gender || fields.sex || '';
+          if (gender) updated.gender = gender;
           return updated;
         });
         setMessage('ID scanned from camera! Please verify and complete the form.');

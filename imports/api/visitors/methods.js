@@ -67,7 +67,7 @@ Meteor.methods({
         {
           role: 'user',
           content: [
-            { type: 'text', text: 'Please read all visible text from this document image. If possible, return any fields like name, email, phone, company, DOB in JSON. Use null for any fields you cannot find. Strictly respond with JSON only, in this format: {"name":"", "email":"", "phone":"", "company":"", "dob":""}.' },
+            { type: 'text', text: 'Please read all visible text from this document image. If possible, return any fields like name, email, phone, company, DOB, gender in JSON. If the ID says "Sex" instead of "Gender", include it in the JSON as "gender". Always include all 6 fields. If a field is missing or unreadable, return null for it. Strictly respond with JSON only, in this format: {"name":"", "email":"", "phone":"", "company":"", "dob":"", "gender":""}.' },
             { type: 'image_url', image_url: { url: base64ImageData, detail: 'auto' } }
           ]
         }
