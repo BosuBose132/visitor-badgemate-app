@@ -5,6 +5,28 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Meteor } from 'meteor/meteor';
 
+
+function normalizeDateForInput(dateStr) {
+  if (!dateStr) return '';
+  dateStr = dateStr.trim();
+
+  // If it's already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+
+  // Assume DD/MM/YYYY
+  const parts = dateStr.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    const day = parts[0].padStart(2, '0');
+    const month = parts[1].padStart(2, '0');
+    const year = parts[2];
+    return `${year}-${day}-${month}`;
+  }
+
+  return '';
+}
+
 // ...styles from your original code...
 const cardStyle = {
   maxWidth: '400px',
@@ -374,7 +396,7 @@ const VisitorForm = () => {
     try {
       const dataUrl = canvas.toDataURL('image/png');
       // Send base64 image to Meteor method for Google Vision OCR
-      Meteor.call('visitors.processOCR', dataUrl, (error, result) => {
+      Meteor.call('visitors.processOCRWithOpenAI', dataUrl, (error, result) => {
         setOcrLoading(false);
         const resultText = result?.text || '';
         if (error || !resultText) {
@@ -382,16 +404,38 @@ const VisitorForm = () => {
           setSuccess(false);
           return;
         }
-        // Use the improved extraction function
-        const { name, company, email, phone, dob } = extractVisitorFields(resultText);
-        setFormData(prev => ({
-          ...prev,
-          name: name || prev.name,
-          company: company || prev.company,
-          email: email || prev.email,
-          phone: phone || prev.phone,
-          dob: dob || prev.dob,
-        }));
+        console.log('OCR raw result:', result.text);
+
+        // CLEAN the GPT response
+        let cleanedText = result.text.trim();
+        if (cleanedText.startsWith('```')) {
+          cleanedText = cleanedText.replace(/```[a-z]*\n?/i, '').replace(/```$/, '').trim();
+        }
+
+        console.log('Cleaned OCR JSON:', cleanedText);
+
+        let fields;
+        try {
+          fields = JSON.parse(cleanedText);
+        } catch (err) {
+          console.error('Error parsing OCR JSON:', err, cleanedText);
+          setMessage('Failed to parse OCR result. Please try again.');
+          setSuccess(false);
+          return;
+        }
+
+        console.log('Parsed OCR fields:', fields);
+        setFormData(prev => {
+          const updated = { ...prev };
+          if (fields.name) updated.name = fields.name;
+          if (fields.company) updated.company = fields.company;
+          if (fields.email) updated.email = fields.email;
+          if (fields.phone) updated.phone = fields.phone;
+          if (fields.dob) updated.dob = normalizeDateForInput(fields.dob);
+          const gender = fields.gender || fields.sex || '';
+          if (gender) updated.gender = gender;
+          return updated;
+        });
         setMessage('ID scanned from camera! Please verify and complete the form.');
         setSuccess(true);
       });
@@ -588,7 +632,7 @@ const VisitorForm = () => {
         );
         const dataUrl = tempCanvas.toDataURL('image/png');
         setMainOcrChecking(true);
-        Meteor.call('visitors.processOCR', dataUrl, (error, result) => {
+        Meteor.call('visitors.processOCRWithOpenAI', dataUrl, (error, result) => {
           setMainOcrChecking(false);
           const resultText = result?.text || '';
           // Only align if text is detected (at least 8 non-space chars)
@@ -937,7 +981,7 @@ const VisitorForm = () => {
                 }}>
                   <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 8L10 12L14 8" stroke="#00bcd4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                  </svg>
                 </span>
               </div>
               {/* Check In Button */}
