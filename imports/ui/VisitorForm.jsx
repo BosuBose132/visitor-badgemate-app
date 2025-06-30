@@ -382,16 +382,27 @@ const VisitorForm = () => {
           setSuccess(false);
           return;
         }
-        // Use the improved extraction function
+        console.log('OCR raw result:', result.text);
+
+        // CLEAN the GPT response
+        let cleanedText = result.text.trim();
+        if (cleanedText.startsWith('```')) {
+          cleanedText = cleanedText.replace(/```[a-z]*\n?/i, '').replace(/```$/, '').trim();
+        }
+
+        console.log('Cleaned OCR JSON:', cleanedText);
+
         let fields;
         try {
-          fields = JSON.parse(resultText);
+          fields = JSON.parse(cleanedText);
         } catch (err) {
-          console.error('Error parsing OCR JSON:', err, resultText);
+          console.error('Error parsing OCR JSON:', err, cleanedText);
           setMessage('Failed to parse OCR result. Please try again.');
           setSuccess(false);
           return;
         }
+
+        console.log('Parsed OCR fields:', fields);
         setFormData(prev => {
           const updated = { ...prev };
           if (fields.name) updated.name = fields.name;
